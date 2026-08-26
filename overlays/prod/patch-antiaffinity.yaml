@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-app
+spec:
+  template:
+    spec:
+      # 單節點 kind 叢集只有一個 node，用 ScheduleAnyway（軟性）而非 DoNotSchedule，
+      # 否則 3 個副本會有 2 個永遠 Pending。正式多節點環境才改成硬性約束。
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: devops-app

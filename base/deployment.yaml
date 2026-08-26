@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-app
+  labels:
+    app.kubernetes.io/name: devops-app
+spec:
+  # replicas 不在 base 寫死語意值：由 overlay 的 kustomization `replicas:` 覆寫。
+  # 若日後導入 HPA，必須把這個欄位整個拿掉，否則 HPA 調高 → ArgoCD selfHeal 調回 → 無限打架。
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0        # 滾動更新期間不允許可用副本數下降
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: devops-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: devops-app
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532        # distroless nonroot
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: ghcr.io/graylee0128/devops-app:bootstrap
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: STARTUP_DELAY_SECONDS
+              value: "5"
+
+          # ---- 三個 probe：語意刻意分離 ----
+          # startupProbe：暖機期間「凍結」liveness/readiness，避免慢啟動被誤殺。
+          # 容忍上限 = failureThreshold x periodSeconds = 30 x 2 = 60s
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+            timeoutSeconds: 1
+
+          # livenessProbe：只問「行程還活著嗎」，絕不檢查外部依賴。
+          # 失敗 => 重啟容器。檢查依賴會讓下游抖動變成全體重啟風暴。
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 2
+
+          # readinessProbe：問「現在能接流量嗎」，可以檢查依賴。
+          # 失敗 => 移出 Endpoints，但不重啟。
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 2
+
+          # 佔位值，Phase 5 以 `kubectl top pod` 實測後回填（見 README 決策依據）
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

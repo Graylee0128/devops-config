@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: devops-app-prod
+
+resources:
+  - ../../base
+  - pdb.yaml
+
+# ↓↓↓ 這一段由 App Repo 的 CI (`kustomize edit set image`) 自動改寫，人工不要手改 ↓↓↓
+images:
+  - name: ghcr.io/graylee0128/devops-app
+    newTag: bootstrap
+# ↑↑↑ CI 寫入點 ↑↑↑
+
+replicas:
+  - name: devops-app
+    count: 3
+
+patches:
+  - path: patch-ingress.yaml
+  - path: patch-antiaffinity.yaml

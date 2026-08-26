@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devops-app-prod
+  namespace: argocd
+  finalizers:
+    # 刪除 Application 時，連帶清掉它建立的資源；沒有這行會留下孤兒資源。
+    # 反過來說，若 ArgoCD 已被移除而 finalizer 還在，Application 會卡在 Terminating。
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Graylee0128/devops-config.git
+    targetRevision: main
+    path: overlays/prod
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devops-app-prod
+
+  syncPolicy:
+    automated:
+      prune: true      # Git 刪掉的資源，叢集也刪掉
+      selfHeal: true   # 有人手動 kubectl edit，會被拉回 Git 狀態
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

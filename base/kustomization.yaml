@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# 刻意不使用 `labels` / `commonLabels` transformer：
+# includeSelectors 會改寫 Deployment.spec.selector，而該欄位是 immutable，
+# 之後任何標籤調整都會導致 apply 失敗、只能刪掉重建。標籤在各 manifest 內明寫。

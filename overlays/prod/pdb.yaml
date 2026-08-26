@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: devops-app
+  labels:
+    app.kubernetes.io/name: devops-app
+spec:
+  # 3 副本保底 2 個可用：node drain / 自願中斷時不會一次全清空。
+  # 注意：PDB 只擋「自願」中斷，擋不住 OOMKill 或節點當機。
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: devops-app
