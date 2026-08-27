@@ -72,7 +72,9 @@ spec:
             successThreshold: 1
             timeoutSeconds: 2
 
-          # 佔位值，Phase 5 以 `kubectl top pod` 實測後回填（見 README 決策依據）
+          # 依據：`kubectl top pod` 實測閒置 1m CPU / 3Mi memory，取約 10 倍餘裕。
+          # memory limit 給 request 的 2 倍——超標是直接 OOMKilled，餘裕要比 CPU 大方。
+          # 尚未做負載測試，limits 仍屬保守估計（見 README「Resources 設計依據」）。
           resources:
             requests:
               cpu: 10m
