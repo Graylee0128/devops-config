@@ -11,7 +11,7 @@ resources:
 images:
 - name: ghcr.io/graylee0128/devops-app
   newName: ghcr.io/graylee0128/devops-app
-  newTag: 64b022be260d5fbc8032f07a9792c6162e795734
+  newTag: 3a668ed2a63730d6b0ab960b8d90c70e9bb3e679
 # ↑↑↑ CI 寫入點 ↑↑↑
 
 replicas:
